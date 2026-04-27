@@ -1,4 +1,6 @@
 .venv
 .git
 __pycache__
-.ruff_cache__
+.ruff_cache
+.direnv
+*.pyc
