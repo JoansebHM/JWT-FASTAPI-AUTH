@@ -17,6 +17,11 @@ class UserUpdate(UserBase):
     password: Annotated[str | None, Field(min_length=3, max_length=128)] = None
 
 
+class LoginSchema(BaseModel):
+    email: Annotated[EmailStr, Field(description="User Email")]
+    password: Annotated[str, Field(min_length=3, max_length=50)]
+
+
 class User(UserBase):
     id: int
     is_active: bool
