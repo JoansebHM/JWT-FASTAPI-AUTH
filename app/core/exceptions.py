@@ -1,3 +1,6 @@
+from app.core.messages import AuthMessages, UserMessages
+
+
 class AppError(Exception):
     """Base Exception"""
 
@@ -7,15 +10,25 @@ class AppError(Exception):
 
 
 class UserNotFoundError(AppError):
-    def __init__(self, user_id: int):
-        super().__init__(f"User with id {user_id} not found", 404)
+    def __init__(self, user_id: int | None = None):
+        super().__init__(f"{UserMessages.NOT_FOUND}", 404)
 
 
 class InvalidCredentialsError(AppError):
     def __init__(self):
-        super().__init__("Email or password incorrect", 401)
+        super().__init__(f"{AuthMessages.INVALID_CREDENTIALS}", 401)
+
+
+class UnauthorizedError(AppError):
+    def __init__(self):
+        super().__init__(f"{AuthMessages.UNAUTHROIZED}", 401)
+
+
+class UserAlreadyExistsError(AppError):
+    def __init__(self):
+        super().__init__(f"{UserMessages.ALREADY_EXISTS}", 409)
 
 
 class InactiveUserError(AppError):
     def __init__(self):
-        super().__init__("This account has been deactivated", 403)
+        super().__init__(f"{UserMessages.INACTIVE}", 403)

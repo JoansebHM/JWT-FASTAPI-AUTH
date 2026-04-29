@@ -1,11 +1,13 @@
 from typing import Annotated, List
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import UserNotFoundError
+from app.core.exceptions import InvalidCredentialsError, UserNotFoundError
 from app.core.handlers import add_exception_handlers
+from app.core.messages import AuthMessages, UserMessages
 from app.core.security import get_password_hash, verify_password
+from app.crud import UserCRUD
 from app.database import Base, engine, get_db
 from app.models import User as UserModel
 from app.schemas import LoginSchema
@@ -21,29 +23,17 @@ DbDep = Annotated[Session, Depends(get_db)]
 add_exception_handlers(app)
 
 
-@app.get("/")
-async def get_data():
-    return {"message": "Hello world"}
-
-
 @app.get("/users", response_model=List[UserSchema])
 async def find_all(db: DbDep):
-    users = db.query(UserModel).filter(UserModel.is_active).all()
-
-    return users
+    return UserCRUD.get_all_users(db=db)
 
 
 @app.get("/users/{user_id}", response_model=UserSchema)
 async def find_one(user_id: int, db: DbDep):
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
-
-    if not user:
-        raise UserNotFoundError(user_id=user_id)
-
-    return user
+    return UserCRUD.get_user_by_id(db=db, user_id=user_id)
 
 
-@app.patch("/users/{user_id}", response_model=UserSchema)
+@app.patch("/users/{user_id}")
 async def update_user(user_id: int, user_update: UserUpdate, db: DbDep):
     user = await find_one(user_id=user_id, db=db)
 
@@ -51,14 +41,14 @@ async def update_user(user_id: int, user_update: UserUpdate, db: DbDep):
 
     for key, value in update_data.items():
         if key == "password":
-            setattr(user, "hashed_password", value)
+            setattr(user, "hashed_password", get_password_hash(value))
         else:
             setattr(user, key, value)
 
     db.commit()
     db.refresh(user)
 
-    return user
+    return UserMessages.UPDATED
 
 
 @app.delete("/users/{user_id}", response_model=UserSchema)
@@ -66,36 +56,20 @@ async def delete_user(user_id: int, db: DbDep):
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found",
-        )
+        raise UserNotFoundError()
 
     setattr(user, "is_active", False)
     db.commit()
     db.refresh(user)
 
-    return user
+    return UserMessages.DELETED
 
 
 @app.post("/register", response_model=UserSchema)
 async def register(user: UserCreate, db: DbDep):
-    db_user = db.query(UserModel).filter(UserModel.email == user.email).first()
-
-    if db_user:
-        raise HTTPException(status_code=400, detail="This email is already registered")
-
-    new_user = UserModel(
-        email=user.email,
-        hashed_password=get_password_hash(user.password),
-        full_name=user.full_name,
+    return UserCRUD.create_user(
+        db=db, email=user.email, password=user.password, full_name=user.full_name
     )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return new_user
 
 
 @app.post("/login")
@@ -107,15 +81,10 @@ async def login(data: LoginSchema, db: DbDep):
     )
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-        )
-
-    if verify_password(
+        raise InvalidCredentialsError()
+    if not verify_password(
         plain_password=data.password, hashed_password=user.hashed_password
     ):
-        return {"message": "Welcome again!"}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-        )
+        raise InvalidCredentialsError()
+
+    return {"message": AuthMessages.LOGIN_SUCCESS, "user": user.email}
