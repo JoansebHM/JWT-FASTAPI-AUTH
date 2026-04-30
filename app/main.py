@@ -3,13 +3,10 @@ from typing import Annotated, List
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import InvalidCredentialsError, UserNotFoundError
 from app.core.handlers import add_exception_handlers
-from app.core.messages import AuthMessages, UserMessages
-from app.core.security import get_password_hash, verify_password
+from app.core.messages import AuthMessages
 from app.crud import UserCRUD
 from app.database import Base, engine, get_db
-from app.models import User as UserModel
 from app.schemas import LoginSchema
 from app.schemas import User as UserSchema
 from app.schemas import UserCreate, UserUpdate
@@ -35,34 +32,12 @@ async def find_one(user_id: int, db: DbDep):
 
 @app.patch("/users/{user_id}")
 async def update_user(user_id: int, user_update: UserUpdate, db: DbDep):
-    user = await find_one(user_id=user_id, db=db)
-
-    update_data = user_update.model_dump(exclude_unset=True)
-
-    for key, value in update_data.items():
-        if key == "password":
-            setattr(user, "hashed_password", get_password_hash(value))
-        else:
-            setattr(user, key, value)
-
-    db.commit()
-    db.refresh(user)
-
-    return UserMessages.UPDATED
+    return UserCRUD.update_user(db=db, user_id=user_id, user_update=user_update)
 
 
 @app.delete("/users/{user_id}", response_model=UserSchema)
 async def delete_user(user_id: int, db: DbDep):
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
-
-    if not user:
-        raise UserNotFoundError()
-
-    setattr(user, "is_active", False)
-    db.commit()
-    db.refresh(user)
-
-    return UserMessages.DELETED
+    return UserCRUD.delete_user(db=db, user_id=user_id)
 
 
 @app.post("/register", response_model=UserSchema)
@@ -74,17 +49,8 @@ async def register(user: UserCreate, db: DbDep):
 
 @app.post("/login")
 async def login(data: LoginSchema, db: DbDep):
-    user = (
-        db.query(UserModel)
-        .filter(UserModel.email == data.email, UserModel.is_active)
-        .first()
-    )
-
-    if not user:
-        raise InvalidCredentialsError()
-    if not verify_password(
-        plain_password=data.password, hashed_password=user.hashed_password
-    ):
-        raise InvalidCredentialsError()
-
-    return {"message": AuthMessages.LOGIN_SUCCESS, "user": user.email}
+    user = UserCRUD.is_user_authenticated(db=db, data=data)
+    return {
+        "message": AuthMessages.LOGIN_SUCCESS,
+        "user": {"email": user.email, "full_name": user.full_name},
+    }
