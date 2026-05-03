@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from fastapi import Depends
 from app.database import DbDep
-from app.core.exceptions import InvalidCredentialsError
+from app.core.exceptions import UnauthorizedError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -40,21 +40,36 @@ def create_access_token(user_id: int):
     return token
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: DbDep):
-
-    from app.crud import UserCRUD
-
+def decode_token(token: str):
     try:
         payload = jwt.decode(token=token, key=SECRET_KEY, algorithms=[ALGORITHM])
 
         user_id: str = payload.get("sub")
 
         if user_id is None:
-            raise IndentationError
-
+            raise UnauthorizedError()
+        return user_id
     except JWTError:
-        raise InvalidCredentialsError()
+        raise UnauthorizedError()
+
+
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: DbDep):
+
+    from app.crud import UserCRUD
+
+    user_id = decode_token(token=token)
 
     user = UserCRUD.get_user_by_id(db=db, user_id=int(user_id))
 
     return user
+
+
+async def list_users(token: Annotated[str, Depends(oauth2_scheme)], db: DbDep):
+
+    from app.crud import UserCRUD
+
+    decode_token(token=token)
+
+    users = UserCRUD.get_all_users(db=db)
+
+    return users

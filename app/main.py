@@ -10,7 +10,7 @@ from app.schemas import LoginSchema
 from app.schemas import User as UserSchema
 from app.schemas import UserCreate, UserUpdate
 from app.models import User as UserModel
-from app.core.security import create_access_token, get_current_user
+from app.core.security import create_access_token, get_current_user, list_users
 
 
 app = FastAPI()
@@ -22,8 +22,8 @@ add_exception_handlers(app)
 
 
 @app.get("/users", response_model=List[UserSchema])
-async def find_all(db: DbDep):
-    return UserCRUD.get_all_users(db=db)
+async def find_all(users: Annotated[List[UserModel], Depends(list_users)]):
+    return users
 
 
 @app.get("/users/me", response_model=UserSchema)

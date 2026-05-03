@@ -2,6 +2,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.models import UserTypes
+
 
 class UserBase(BaseModel):
     email: Annotated[EmailStr | None, Field(description="User Email")] = None
@@ -25,5 +27,6 @@ class LoginSchema(BaseModel):
 class User(UserBase):
     id: int
     is_active: bool
+    user_type: UserTypes
 
     model_config = {"from_attributes": True}

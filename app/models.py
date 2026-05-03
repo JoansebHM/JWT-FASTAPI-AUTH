@@ -1,7 +1,14 @@
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, String, Enum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+import enum
+
+
+class UserTypes(enum.Enum):
+    admin = "admin"
+    user = "user"
 
 
 class User(Base):
@@ -11,4 +18,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     full_name: Mapped[str] = mapped_column(String, nullable=False)
+    user_type: Mapped[UserTypes] = mapped_column(
+        Enum(UserTypes), nullable=False, server_default=UserTypes.user.value
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
