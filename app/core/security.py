@@ -6,7 +6,7 @@ from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from fastapi import Depends
-from app.database import DbDep
+from app.dependencies import DbDep
 from app.core.exceptions import UnauthorizedError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")

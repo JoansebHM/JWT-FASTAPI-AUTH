@@ -2,9 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
-from typing import Annotated
-from fastapi import Depends
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 load_dotenv()
 
@@ -22,9 +20,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-DbDep = Annotated[Session, Depends(get_db)]
 
 
 class Base(DeclarativeBase):

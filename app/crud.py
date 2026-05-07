@@ -10,9 +10,13 @@ from app.core.exceptions import (
 from app.core.security import get_password_hash, verify_password
 from app.models import User as UserModel
 from app.schemas import LoginSchema, UserUpdate
+from app.dependencies import DbDep
 
 
 class UserCRUD:
+    def __init__(self, db: DbDep):
+        self.db = db
+
     @staticmethod
     def not_found_user(user: UserModel | None = None):
         if not user:
