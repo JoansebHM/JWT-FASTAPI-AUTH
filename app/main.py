@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from app.core.handlers import add_exception_handlers
 from app.core.messages import AuthMessages
 from app.crud import UserCRUD
-from app.database import Base, engine
 from app.dependencies import DbDep
 from app.schemas import LoginSchema
 from app.schemas import User as UserSchema, UserCreate
@@ -12,9 +11,6 @@ from app.routers.router import api_router
 
 
 app = FastAPI()
-
-Base.metadata.create_all(bind=engine)
-
 
 add_exception_handlers(app)
 
