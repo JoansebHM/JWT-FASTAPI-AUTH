@@ -1,6 +1,8 @@
 services:
   api:
     build: .
+    volumes:
+      - .:/app
     container_name: jwt_fastapi_auth
     ports:
       - "8000:8000"
